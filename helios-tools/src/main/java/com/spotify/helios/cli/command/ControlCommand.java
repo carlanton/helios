@@ -24,6 +24,7 @@ package com.spotify.helios.cli.command;
 import com.google.common.base.Throwables;
 
 import com.spotify.helios.cli.Target;
+import com.spotify.helios.cli.Utils;
 import com.spotify.helios.client.HeliosClient;
 
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -82,7 +83,7 @@ public abstract class ControlCommand implements CliCommand {
                       final PrintStream err, final String username, final boolean json)
       throws InterruptedException, IOException {
 
-    final HeliosClient client = CommandUtil.getClient(target, err, username);
+    final HeliosClient client = Utils.getClient(target, err, username);
     if (client == null) {
       return false;
     }

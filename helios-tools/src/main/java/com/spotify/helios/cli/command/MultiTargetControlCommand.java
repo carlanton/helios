@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.spotify.helios.cli.Target;
+import com.spotify.helios.cli.Utils;
 import com.spotify.helios.client.HeliosClient;
 
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -16,8 +17,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-public abstract class MultiDomainCommand implements CliCommand {
-  MultiDomainCommand(final Subparser parser) {
+public abstract class MultiTargetControlCommand implements CliCommand {
+  MultiTargetControlCommand(final Subparser parser) {
     parser.setDefault("command", this).defaultHelp(true);
   }
 
@@ -27,7 +28,7 @@ public abstract class MultiDomainCommand implements CliCommand {
 
     final Builder<ClusterClient> clientBuilder = ImmutableList.<ClusterClient>builder();
     for (final Target target : targets) {
-      final HeliosClient client = CommandUtil.getClient(target, err, username);
+      final HeliosClient client = Utils.getClient(target, err, username);
       if (client == null) {
         return 1;
       }
