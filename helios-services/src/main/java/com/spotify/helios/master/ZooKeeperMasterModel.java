@@ -67,9 +67,9 @@ import java.util.UUID;
 
 import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Optional.fromNullable;
+import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Lists.reverse;
 import static com.spotify.helios.common.descriptors.Descriptor.parse;
-import static com.spotify.helios.common.descriptors.Goal.UNDEPLOY;
 import static com.spotify.helios.common.descriptors.HostStatus.Status.DOWN;
 import static com.spotify.helios.common.descriptors.HostStatus.Status.UP;
 import static com.spotify.helios.servicescommon.coordination.ZooKeeperOperations.check;
@@ -854,41 +854,28 @@ public class ZooKeeperMasterModel implements MasterModel {
       throw new JobNotDeployedException(host, jobId);
     }
 
-    // TODO (dano): Is this safe? can the ports of an undeployed job collide with a new deployment?
-    // TODO (drewc):  If it's still in UNDEPLOY, that means the agent hasn't gotten to it
-    //    yet, which means it probably won't see the new job yet either.  However, it may spin up
-    //    a new supervisor for the new job before the old one is done being torn down.  So it can
-    //    race and lose.  With a little change to the Agent where we manage the supervisors, with
-    //    some coordination, we could remove the race, such that this race goes away.  Specifically,
-    //    we're creating new Supervisors before updating existing ones.  If we swap that, part of
-    //    the problem goes away, but we'd need some coordination between the Supervisor and the
-    //    agent such that the Agent could wait until the Supervisor had handled the Goal change.
-    //    Additionally, since ZK guarantees we'll see the writes in the proper order, we wouldn't
-    //    need to deal with seeing the new job before the UNDEPLOY.
-
     final Job job = getJob(client, jobId);
-    final String path = Paths.configHostJob(host, jobId);
-    final Task task = new Task(job, UNDEPLOY);
-    final List<ZooKeeperOperation> operations = Lists.newArrayList(
-        set(path, task.toJsonBytes()),
-        delete(Paths.configJobHost(jobId, host)));
-
-    final List<Integer> staticPorts = staticPorts(job);
-    for (int port : staticPorts) {
-        operations.add(delete(Paths.configHostPort(host, port)));
-    }
+    final String configHostJobPath = Paths.configHostJob(host, jobId);
+    final List<String> nodes = newArrayList();
 
     try {
-      client.transaction(operations);
-    } catch (NoNodeException e) {
-      if (e.getPath().equals(path)) {
-        // NoNodeException on updating the deployment node may happen due to retry failures.
-        // If the deployment isn't there anymore, we're done.
-        return deployment;
-      } else {
-        // The relation node deletes should not fail unless there is a programming error.
-        throw new HeliosRuntimeException("Removing deployment failed", e);
+      // use listRecursive to remove both job node and its child creation node
+      nodes.addAll(reverse(client.listRecursive(configHostJobPath)));
+      nodes.add(Paths.configJobHost(jobId, host));
+
+      final List<Integer> staticPorts = staticPorts(job);
+      for (int port : staticPorts) {
+          nodes.add(Paths.configHostPort(host, port));
       }
+
+      client.transaction(delete(nodes));
+
+    } catch (NoNodeException e) {
+      // This method is racy since it's possible someone undeployed the job since we called
+      // getDeployment. If we now discover the job is undeployed, throw an exception and
+      // handle it the same as if we discovered this earlier.
+      // TODO (ryan): do we need to handle retry failures here?
+      throw new JobNotDeployedException(host, jobId);
     } catch (KeeperException e) {
       throw new HeliosRuntimeException("Removing deployment failed", e);
     }
