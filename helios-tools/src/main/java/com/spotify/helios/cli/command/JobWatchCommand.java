@@ -48,7 +48,7 @@ import java.util.concurrent.ExecutionException;
 import static com.spotify.helios.cli.Utils.allAsMap;
 import static net.sourceforge.argparse4j.impl.Arguments.storeTrue;
 
-public class JobWatchCommand extends ControlCommand {
+public class JobWatchCommand extends MultiDomainCommand {
 
   private final Argument prefixesArg;
   private final Argument jobsArg;
@@ -166,5 +166,12 @@ public class JobWatchCommand extends ControlCommand {
     final Map<JobId, JobStatus> statuses = Maps.newTreeMap();
     statuses.putAll(allAsMap(futures));
     return statuses;
+  }
+
+  @Override
+  int run(Namespace options, List<ClusterClient> clients, PrintStream out, boolean json)
+      throws ExecutionException, InterruptedException, IOException {
+    // TODO Auto-generated method stub
+    return 0;
   }
 }

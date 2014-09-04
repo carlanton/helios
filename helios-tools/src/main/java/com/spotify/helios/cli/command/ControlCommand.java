@@ -32,7 +32,6 @@ import net.sourceforge.argparse4j.inf.Subparser;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -40,7 +39,7 @@ import java.util.concurrent.TimeoutException;
 import static com.google.common.base.Strings.repeat;
 import static java.lang.String.format;
 
-public abstract class ControlCommand {
+public abstract class ControlCommand implements CliCommand {
 
   public static final int BATCH_SIZE = 10;
   public static final int QUEUE_SIZE = 1000;
@@ -50,6 +49,7 @@ public abstract class ControlCommand {
     parser.setDefault("command", this).defaultHelp(true);
   }
 
+  @Override
   public int run(final Namespace options, final List<Target> targets, final PrintStream out,
                  final PrintStream err, final String username, final boolean json)
       throws IOException, InterruptedException {
@@ -82,21 +82,10 @@ public abstract class ControlCommand {
                       final PrintStream err, final String username, final boolean json)
       throws InterruptedException, IOException {
 
-    List<URI> endpoints = Collections.emptyList();
-    try {
-      endpoints = target.getEndpointSupplier().get();
-    } catch (Exception ignore) {
-      // TODO (dano): Nasty. Refactor target to propagate resolution failure in a checked manner.
-    }
-    if (endpoints.size() == 0) {
-      err.println("Failed to resolve helios master in " + target);
+    final HeliosClient client = CommandUtil.getClient(target, err, username);
+    if (client == null) {
       return false;
     }
-
-    final HeliosClient client = HeliosClient.newBuilder()
-        .setEndpointSupplier(target.getEndpointSupplier())
-        .setUser(username)
-        .build();
 
     try {
       final int result = run(options, client, out, json);
