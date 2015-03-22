@@ -36,6 +36,7 @@ import com.spotify.docker.client.messages.ImageInfo;
 import com.spotify.docker.client.messages.PortBinding;
 import com.spotify.helios.common.descriptors.HealthCheck;
 import com.spotify.helios.common.descriptors.Job;
+import com.spotify.helios.common.descriptors.JobId;
 import com.spotify.helios.common.descriptors.PortMapping;
 import com.spotify.helios.common.descriptors.Resources;
 import com.spotify.helios.common.descriptors.ServiceEndpoint;
@@ -161,6 +162,9 @@ public class TaskConfig {
   public ServiceRegistration registration()
       throws InterruptedException {
     final ServiceRegistration.Builder builder = ServiceRegistration.newBuilder();
+
+    final JobId jobId = job.getId();
+    builder.jobId(jobId.getName(), jobId.getVersion(), jobId.getHash());
 
     for (final Map.Entry<ServiceEndpoint, ServicePorts> entry :
         job.getRegistration().entrySet()) {

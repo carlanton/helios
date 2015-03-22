@@ -34,13 +34,34 @@ import static java.util.Collections.unmodifiableList;
 public class ServiceRegistration {
 
   private final List<Endpoint> endpoints;
+  private final String jobName;
+  private final String jobVersion;
+  private final String jobHash;
 
-  public ServiceRegistration(List<Endpoint> endpoints) {
+  public ServiceRegistration(List<Endpoint> endpoints,
+                             String jobName,
+                             String jobVersion,
+                             String jobHash) {
     this.endpoints = unmodifiableList(new ArrayList<>(endpoints));
+    this.jobName = jobName;
+    this.jobVersion = jobVersion;
+    this.jobHash = jobHash;
   }
 
   public List<Endpoint> getEndpoints() {
     return endpoints;
+  }
+
+  public String getJobName() {
+    return jobName;
+  }
+
+  public String getJobVersion() {
+    return jobVersion;
+  }
+
+  public String getJobHash() {
+    return jobHash;
   }
 
   public static Builder newBuilder() {
@@ -50,6 +71,9 @@ public class ServiceRegistration {
   public static class Builder {
 
     private List<Endpoint> endpoints = new ArrayList<>();
+    private String jobName;
+    private String jobVersion;
+    private String jobHash;
 
     @Deprecated
     public Builder endpoint(final String name,
@@ -78,8 +102,17 @@ public class ServiceRegistration {
       return this;
     }
 
+    public Builder jobId(final String jobName,
+                         final String jobVersion,
+                         final String jobHash) {
+      this.jobName = jobName;
+      this.jobVersion = jobVersion;
+      this.jobHash = jobHash;
+      return this;
+    }
+
     public ServiceRegistration build() {
-      return new ServiceRegistration(endpoints);
+      return new ServiceRegistration(endpoints, jobName, jobVersion, jobHash);
     }
   }
 
